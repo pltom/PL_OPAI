@@ -1,0 +1,65 @@
+schema: workflow/2022.04
+name: OP AI to Slack
+settings:
+  error_notification: true
+  lambda_timeout: 750
+triggers:
+- id: hi_vmHP2y5
+steps:
+- namespace: filter
+  runtime: nodejs20.x
+  uses: "./filter/entry.js"
+  props:
+    _filter:
+      continue: 'true'
+      rules:
+        t: and
+        r:
+        - a: "{{steps.trigger.event.method}}"
+          op: str=
+          b: POST
+- namespace: channel_code
+  runtime: nodejs20.x
+  uses: "./channel_code/entry.js"
+- namespace: send_message_to_channel
+  runtime: nodejs20.x
+  uses: slack_v2-send-message-to-channel@0.1.4
+  _props_cursor: dyp_BrUZQB3b
+  props:
+    slack:
+      authProvisionId: apn_3Jh34EZ
+    conversation:
+      __lv:
+        label: 'Private channel: opai-sales-calls'
+        value: C09M9C4059N
+    text: |-
+      {{steps.channel_code.$return_value.blocks[0].text.text}}
+      {{steps.channel_code.$return_value.blocks[1].fields[0].text}}
+      {{steps.channel_code.$return_value.blocks[1].fields[1].text}}
+      {{steps.channel_code.$return_value.blocks[1].fields[2].text}}
+      {{steps.channel_code.$return_value.blocks[2].text.text}}
+      {{steps.channel_code.$return_value.blocks[4].text.text}}
+      {{steps.channel_code.$return_value.blocks[5].fields[0].text}}
+      {{steps.channel_code.$return_value.blocks[5].fields[1].text}}
+      {{steps.channel_code.$return_value.blocks[5].fields[2].text}}
+      {{steps.channel_code.$return_value.blocks[5].fields[3].text}}
+      {{steps.channel_code.$return_value.blocks[5].fields[4].text}}
+      {{steps.channel_code.$return_value.blocks[7].text.text}}
+      {{steps.channel_code.$return_value.blocks[11].fields[0].text}}
+      {{steps.channel_code.$return_value.blocks[9].text.text}}
+      {{steps.channel_code.$return_value.blocks[9].text.text}}
+      {{steps.channel_code.$return_value.blocks[10].text.text}}
+      {{steps.channel_code.$return_value.blocks[11].fields[0].text}}
+      {{steps.channel_code.$return_value.blocks[11].fields[1].text}}
+      {{steps.channel_code.$return_value.blocks[11].fields[2].text}}
+      {{steps.channel_code.$return_value.blocks[11].fields[3].text}}
+      {{steps.channel_code.$return_value.blocks[12].text.text}}
+      {{steps.channel_code.$return_value.blocks[8].text.text}}
+      {{steps.channel_code.$return_value.blocks[15].elements[0].url}}
+      OP AI Link:
+      {{steps.trigger.event.body.link}}
+    addToChannel: false
+    thread_broadcast: false
+    unfurl_links: false
+    unfurl_media: false
+
