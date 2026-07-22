@@ -44,9 +44,12 @@ steps:
       {{steps.channel_code.$return_value.blocks[5].fields[2].text}}
       {{steps.channel_code.$return_value.blocks[5].fields[3].text}}
       {{steps.channel_code.$return_value.blocks[5].fields[4].text}}
-      {{steps.channel_code.$return_value.blocks[7].text.text}}
-      {{steps.channel_code.$return_value.blocks[11].fields[0].text}}
-      {{steps.channel_code.$return_value.blocks[9].text.text}}
+      {{steps.channel_code.$return_value.blocks[5].fields[5].text}}
+      {{steps.channel_code.$return_value.blocks[6].fields[0].text}}
+      {{steps.channel_code.$return_value.blocks[6].fields[1].text}}
+      {{steps.channel_code.$return_value.blocks[6].fields[2].text}}
+      {{steps.channel_code.$return_value.blocks[6].fields[3].text}}
+      {{steps.channel_code.$return_value.blocks[8].text.text}}
       {{steps.channel_code.$return_value.blocks[9].text.text}}
       {{steps.channel_code.$return_value.blocks[10].text.text}}
       {{steps.channel_code.$return_value.blocks[11].fields[0].text}}
@@ -54,7 +57,7 @@ steps:
       {{steps.channel_code.$return_value.blocks[11].fields[2].text}}
       {{steps.channel_code.$return_value.blocks[11].fields[3].text}}
       {{steps.channel_code.$return_value.blocks[12].text.text}}
-      {{steps.channel_code.$return_value.blocks[8].text.text}}
+      {{steps.channel_code.$return_value.blocks[13].text.text}}
       {{steps.channel_code.$return_value.blocks[15].elements[0].url}}
       OP AI Link:
       {{steps.trigger.event.body.link}}

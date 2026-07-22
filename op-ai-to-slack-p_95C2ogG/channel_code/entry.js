@@ -143,28 +143,29 @@ export default defineComponent({
       return details;
     }
     
-    // Extract salesperson and prospect names from evaluation text
-    const salespersonMatch = data.evaluation?.match(/Salesperson:\s*([^\n]+)/);
-    const prospectMatch = data.evaluation?.match(/Prospect:\s*([^\n]+)/);
-
-    // Handle different variations in the data
+    // --- FIX: Use data.salesperson and data.prospect directly from payload ---
     let salesperson = 'Unknown';
-    if (data.salesperson_name) {
-      salesperson = data.salesperson_name;
-    } else if (salespersonMatch && salespersonMatch[1].trim() !== '[Not Specified]') {
-      salesperson = salespersonMatch[1].trim();
+    if (data.salesperson) {
+      salesperson = data.salesperson;
     } else {
-      salesperson = 'More info on OP AI link';
+      const salespersonMatch = data.evaluation?.match(/Salesperson:\s*([^\n]+)/);
+      if (salespersonMatch && salespersonMatch[1].trim() !== 'N/A' && salespersonMatch[1].trim() !== '[Not Specified]') {
+        salesperson = salespersonMatch[1].trim();
+      } else {
+        salesperson = 'More info on OP AI link';
+      }
     }
 
     let prospect = 'Unknown';
-    if (data.prospect_name) {
-      prospect = data.prospect_name;
-    } else if (prospectMatch && prospectMatch[1].trim() !== '[Not Specified]') {
-      prospect = prospectMatch[1].trim();
-    } else if (data.prospect) {
+    if (data.prospect) {
       prospect = data.prospect;
+    } else {
+      const prospectMatch = data.evaluation?.match(/Prospect:\s*([^\n]+)/);
+      if (prospectMatch && prospectMatch[1].trim() !== 'N/A' && prospectMatch[1].trim() !== '[Not Specified]') {
+        prospect = prospectMatch[1].trim();
+      }
     }
+    // -------------------------------------------------------------------------
     
     // Get evaluation details
     const evalDetails = data.evaluation ? extractEvaluationDetails(data.evaluation) : {};
@@ -176,7 +177,7 @@ export default defineComponent({
     // Create the formatted Slack message
     const slackMessage = {
       blocks: [
-        // Header
+        // Block [0] - Header
         {
           type: "header",
           text: {
@@ -185,7 +186,7 @@ export default defineComponent({
           }
         },
         
-        // Main info section
+        // Block [1] - Main info section
         {
           type: "section",
           fields: [
@@ -208,20 +209,21 @@ export default defineComponent({
           ]
         },
         
-        // Talking ratio if available
-        ...(evalDetails.talkingRatio ? [{
+        // Block [2] - Talking ratio (conditional, always included as empty if missing)
+        {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `*🗣️ Talking Ratio:* ${evalDetails.talkingRatio}`
+            text: evalDetails.talkingRatio ? `*🗣️ Talking Ratio:* ${evalDetails.talkingRatio}` : `*🗣️ Talking Ratio:* N/A`
           }
-        }] : []),
+        },
         
+        // Block [3] - Divider
         {
           type: "divider"
         },
         
-        // Performance scores
+        // Block [4] - Performance breakdown header
         {
           type: "section",
           text: {
@@ -229,6 +231,8 @@ export default defineComponent({
             text: "*📊 Performance Breakdown*"
           }
         },
+
+        // Block [5] - Performance scores (6 fields)
         {
           type: "section",
           fields: [
@@ -259,164 +263,112 @@ export default defineComponent({
           ]
         },
         
-        // Additional metrics if available
-        ...(data.guiding || data.objection || data.stories || data.remorse ? [{
+        // Block [6] - Additional metrics (guiding/objection/stories/remorse)
+        {
           type: "section",
           fields: [
-            ...(data.guiding ? [{
+            {
               type: "mrkdwn",
-              text: `*Guiding Prospect:* ${data.guiding}/10 ${getScoreEmoji(data.guiding, true)}`
-            }] : []),
-            ...(data.objection ? [{
+              text: `*Guiding Prospect:* ${data.guiding || 0}/10 ${getScoreEmoji(data.guiding || 0, true)}`
+            },
+            {
               type: "mrkdwn", 
-              text: `*Objection Handling:* ${data.objection}/10 ${getScoreEmoji(data.objection, true)}`
-            }] : []),
-            ...(data.stories ? [{
+              text: `*Objection Handling:* ${data.objection || 0}/10 ${getScoreEmoji(data.objection || 0, true)}`
+            },
+            {
               type: "mrkdwn",
-              text: `*Storytelling:* ${data.stories}/10 ${getScoreEmoji(data.stories, true)}`
-            }] : []),
-            ...(data.remorse ? [{
+              text: `*Storytelling:* ${data.stories || 0}/10 ${getScoreEmoji(data.stories || 0, true)}`
+            },
+            {
               type: "mrkdwn",
-              text: `*Preventing Remorse:* ${data.remorse}/10 ${getScoreEmoji(data.remorse, true)}`
-            }] : [])
+              text: `*Preventing Remorse:* ${data.remorse || 0}/10 ${getScoreEmoji(data.remorse || 0, true)}`
+            }
           ]
-        }] : []),
+        },
         
-        // Final verdict if available
-        ...(evalDetails.finalVerdict ? [
-          {
-            type: "divider"
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: `*🎯 Final Verdict*\n${evalDetails.finalVerdict}`
-            }
-          }
-        ] : []),
+        // Block [7] - Divider
+        {
+          type: "divider"
+        },
         
-        // Top tactics if available
-        ...(evalDetails.topTactics.length > 0 ? [{
+        // Block [8] - Final verdict
+        {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `*✅ Top Tactics Observed*\n${evalDetails.topTactics.map(tactic => `• ${tactic}`).join('\n')}`
+            text: evalDetails.finalVerdict ? `*🎯 Final Verdict*\n${evalDetails.finalVerdict}` : `*🎯 Final Verdict*\nN/A`
           }
-        }] : []),
+        },
         
-        // Areas for improvement if available
-        ...(evalDetails.topErrors.length > 0 ? [{
+        // Block [9] - Strategy checklist
+        {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `*🔧 Areas for Improvement*\n${evalDetails.topErrors.map(error => `• ${error}`).join('\n')}`
+            text: evalDetails.strategyChecklist.length > 0
+              ? `*📊 Strategy Checklist*\n${evalDetails.strategyChecklist.map(item => `${item.passed ? '✅' : '❌'} ${item.name}`).join('\n')}`
+              : `*📊 Strategy Checklist*\nN/A`
           }
-        }] : []),
+        },
         
-        // Next steps if available
-        ...(evalDetails.nextSteps.length > 0 ? [{
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `*📋 Next Steps*\n${evalDetails.nextSteps.map((step, index) => `${index + 1}. ${step}`).join('\n')}`
-          }
-        }] : []),
-        
-        // Structured reflection if available
-        ...(evalDetails.structuredReflection?.didWell ? [
-          {
-            type: "divider"
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: "*📝 Performance Reflection*"
-            }
-          },
-          {
-            type: "section",
-            fields: [
-              {
-                type: "mrkdwn",
-                text: `*✅ What they did well:*\n${evalDetails.structuredReflection.didWell}`
-              },
-              {
-                type: "mrkdwn",
-                text: `*⚠️ Minor improvements:*\n${evalDetails.structuredReflection.minorImprovements || 'None noted'}`
-              }
-            ]
-          },
-          ...(evalDetails.structuredReflection.majorMistakes ? [{
-            type: "section",
-            text: {
-              type: "mrkdwn", 
-              text: `*🚨 Major mistakes:*\n${evalDetails.structuredReflection.majorMistakes}`
-            }
-          }] : [])
-        ] : []),
-        
-        // Strategy checklist if available
-        ...(evalDetails.strategyChecklist.length > 0 ? [{
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `*📊 Strategy Checklist*\n${evalDetails.strategyChecklist.map(item => `${item.passed ? '✅' : '❌'} ${item.name}`).join('\n')}`
-          }
-        }] : []),
-        
-        // Prospect takeaways if available
-        ...(evalDetails.prospectTakeaways?.coreProblem ? [{
+        // Block [10] - Prospect insights header
+        {
           type: "section",
           text: {
             type: "mrkdwn",
             text: "*👤 Prospect Insights*"
           }
-        }, {
+        },
+        
+        // Block [11] - Prospect fields (4 fields)
+        {
           type: "section",
           fields: [
             {
               type: "mrkdwn",
-              text: `*Problem:*\n${evalDetails.prospectTakeaways.coreProblem}`
+              text: `*Problem:*\n${evalDetails.prospectTakeaways?.coreProblem || 'N/A'}`
             },
             {
               type: "mrkdwn",
-              text: `*Motivation:*\n${evalDetails.prospectTakeaways.motivation}`
+              text: `*Motivation:*\n${evalDetails.prospectTakeaways?.motivation || 'N/A'}`
             },
             {
               type: "mrkdwn", 
-              text: `*Emotions:*\n${evalDetails.prospectTakeaways.emotions}`
+              text: `*Emotions:*\n${evalDetails.prospectTakeaways?.emotions || 'N/A'}`
             },
             {
               type: "mrkdwn",
-              text: `*Timeline:*\n${evalDetails.prospectTakeaways.timeline}`
+              text: `*Timeline:*\n${evalDetails.prospectTakeaways?.timeline || 'N/A'}`
             }
           ]
-        }] : []),
+        },
         
-        // Missed opportunities if available
-        ...(evalDetails.missedOpportunities.length > 0 ? [{
+        // Block [12] - Missed opportunities
+        {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `*💡 Missed Opportunities*\n${evalDetails.missedOpportunities.map((opp, index) => `${index + 1}. ${opp}`).join('\n')}`
+            text: evalDetails.missedOpportunities.length > 0
+              ? `*💡 Missed Opportunities*\n${evalDetails.missedOpportunities.map((opp, index) => `${index + 1}. ${opp}`).join('\n')}`
+              : `*💡 Missed Opportunities*\nN/A`
           }
-        }] : []),
+        },
         
-        // Final learning if available
-        ...(evalDetails.finalLearning ? [{
+        // Block [13] - Final learning
+        {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `*🎓 Final Learning*\n${evalDetails.finalLearning}`
+            text: evalDetails.finalLearning ? `*🎓 Final Learning*\n${evalDetails.finalLearning}` : `*🎓 Final Learning*\nN/A`
           }
-        }] : []),
+        },
         
-        // Action buttons
+        // Block [14] - Divider
         {
           type: "divider"
         },
+        
+        // Block [15] - Action buttons
         {
           type: "actions",
           elements: [
