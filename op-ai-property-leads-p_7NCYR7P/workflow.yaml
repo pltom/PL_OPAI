@@ -1,10 +1,10 @@
 schema: workflow/2022.04
-name: OP AI - Lead Buyer Outreach
+name: OP AI - Property Leads
 settings:
   error_notification: true
   lambda_timeout: 750
 triggers:
-- id: hi_NQHJ7Ln
+- id: hi_a1HjN3p
 steps:
 - namespace: trim_audio_if_needed
   runtime: nodejs20.x
@@ -12,9 +12,12 @@ steps:
 - namespace: transcribe
   runtime: nodejs20.x
   uses: "./transcribe/entry.js"
-- namespace: custom_request
+- namespace: check_trasncript_lenght
   runtime: nodejs20.x
-  uses: http-custom-request@1.1.3
+  uses: "./check_trasncript_lenght/entry.js"
+- namespace: send_back
+  runtime: nodejs20.x
+  uses: http-post-request@1.1.3
   props:
     httpRequest:
       auth:
@@ -28,19 +31,23 @@ steps:
         - name: URL
           value: "{{steps.trigger.event.body.recordingUrl}}"
         - name: Transcript
-          value: "{{steps.transcribe.transcript}}"
+          value: "{{steps.code.transcript}}"
         - name: Phone Number
           value: "{{steps.trigger.event.body.contactPhone}}"
         - name: agent
           value: "{{steps.trigger.event.body.phoneUser}}"
         mode: fields
         type: fields
-      headers: []
+      headers:
+      - name: Content-Type
+        value: 'multipart/form-data; boundary=<calculated>
+
+          '
       method: POST
       params:
       - name: ''
         value: ''
         disabled: true
-      url: https://services.leadconnectorhq.com/hooks/I8teKtNQPQD1s3F2zMcX/webhook-trigger/dfc047ac-ede0-4ad1-ba4a-8d926b24c131
+      url: https://services.leadconnectorhq.com/hooks/MGJm2Xbycbbnnb409zoC/webhook-trigger/e01e666d-f282-4501-b24f-328124598467
       tab: Body
 
