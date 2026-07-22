@@ -12,9 +12,9 @@ steps:
 - namespace: transcribe
   runtime: nodejs20.x
   uses: "./transcribe/entry.js"
-- namespace: check_trasncript_lenght
+- namespace: check_transcript_length
   runtime: nodejs20.x
-  uses: "./check_trasncript_lenght/entry.js"
+  uses: "./check_transcript_length/entry.js"
 - namespace: send_back
   runtime: nodejs20.x
   uses: http-post-request@1.1.3
