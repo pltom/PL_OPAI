@@ -3,14 +3,14 @@ import fs from "fs";
 
 export default defineComponent({
   async run({ steps, $ }) {
-    const trim = steps.Trim_audio_if_needed || steps.trim_audio_if_needed;
+    const trim = steps.trim_audio_if_needed || steps.trim_audio_if_needed;
     const chunkPaths =
       trim?.exports?.chunkPaths ??
       trim?.$return_value?.chunkPaths ??
       [];
 
     if (!Array.isArray(chunkPaths) || chunkPaths.length === 0) {
-      throw new Error("No chunkPaths found from Trim_audio_if_needed.");
+      throw new Error("No chunkPaths found from trim_audio_if_needed.");
     }
 
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });

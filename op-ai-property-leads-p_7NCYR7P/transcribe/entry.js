@@ -3,7 +3,7 @@ import fs from "fs";
 
 export default defineComponent({
   async run({ steps, $ }) {
-    const trim = steps.Trim_audio_if_needed || steps.trim_audio_if_needed;
+    const trim = steps.trim_audio_if_needed || steps.trim_audio_if_needed;
     const chunkPaths =
       trim?.exports?.chunkPaths ??
       trim?.$return_value?.chunkPaths ??
