@@ -60,6 +60,7 @@ export default defineComponent({
     console.log("Chunks:", chunkPaths);
     $.export("chunkPaths", chunkPaths);
     $.export("parts", chunkPaths.length);
+    await new Promise(r => setTimeout(r, 100));
     return { chunkPaths, parts: chunkPaths.length };
   }
 });
