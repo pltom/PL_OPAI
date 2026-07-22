@@ -31,7 +31,7 @@ steps:
         - name: URL
           value: "{{steps.trigger.event.body.recordingUrl}}"
         - name: Transcript
-          value: "{{steps.code.transcript}}"
+          value: "{{steps.transcribe.transcript}}"
         - name: Phone Number
           value: "{{steps.trigger.event.body.contactPhone}}"
         - name: agent

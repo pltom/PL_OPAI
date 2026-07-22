@@ -1,7 +1,7 @@
 export default defineComponent({
   async run({ steps, $ }) {
 
-    const text = steps.code.transcript || "";
+    const text = steps.transcribe.transcript || "";
     const wordCount = text.trim().split(/\s+/).length;
 
     if (wordCount <= 150) {
