@@ -1,0 +1,46 @@
+schema: workflow/2022.04
+name: OP AI - Lead Buyer Outreach
+settings:
+  error_notification: true
+  lambda_timeout: 750
+triggers:
+- id: hi_NQHJ7Ln
+steps:
+- namespace: trim_audio_if_needed
+  runtime: nodejs20.x
+  uses: "./trim_audio_if_needed/entry.js"
+- namespace: transcribe
+  runtime: nodejs20.x
+  uses: "./transcribe/entry.js"
+- namespace: custom_request
+  runtime: nodejs20.x
+  uses: http-custom-request@1.1.3
+  props:
+    httpRequest:
+      auth:
+        type: none
+        username: ''
+        password: ''
+        token: ''
+      body:
+        contentType: multipart/form-data
+        fields:
+        - name: URL
+          value: "{{steps.trigger.event.body.recordingUrl}}"
+        - name: Transcript
+          value: "{{steps.Transcribe.transcript}}"
+        - name: Phone Number
+          value: "{{steps.trigger.event.body.contactPhone}}"
+        - name: agent
+          value: "{{steps.trigger.event.body.phoneUser}}"
+        mode: fields
+        type: fields
+      headers: []
+      method: POST
+      params:
+      - name: ''
+        value: ''
+        disabled: true
+      url: https://services.leadconnectorhq.com/hooks/I8teKtNQPQD1s3F2zMcX/webhook-trigger/dfc047ac-ede0-4ad1-ba4a-8d926b24c131
+      tab: Body
+
