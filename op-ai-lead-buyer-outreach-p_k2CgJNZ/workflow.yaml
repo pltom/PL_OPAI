@@ -15,7 +15,7 @@ steps:
 - namespace: check_transcript_length
   runtime: nodejs20.x
   uses: "./check_transcript_length/entry.js"
-- namespace: custom_request
+- namespace: send_back
   runtime: nodejs20.x
   uses: http-custom-request@1.1.3
   props:
