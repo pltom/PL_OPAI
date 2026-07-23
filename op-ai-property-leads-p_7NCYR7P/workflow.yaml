@@ -39,15 +39,14 @@ steps:
         mode: fields
         type: fields
       headers:
-      - name: Content-Type
-        value: 'multipart/form-data; boundary=<calculated>
-
-          '
+      - name: ''
+        value: ''
+        disabled: true
       method: POST
       params:
       - name: ''
         value: ''
         disabled: true
       url: https://services.leadconnectorhq.com/hooks/MGJm2Xbycbbnnb409zoC/webhook-trigger/e01e666d-f282-4501-b24f-328124598467
-      tab: Body
+      tab: Headers
 
