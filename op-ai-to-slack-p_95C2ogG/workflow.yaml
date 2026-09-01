@@ -37,6 +37,7 @@ steps:
       {{steps.channel_code.$return_value.blocks[1].fields[0].text}}
       {{steps.channel_code.$return_value.blocks[1].fields[1].text}}
       {{steps.channel_code.$return_value.blocks[1].fields[2].text}}
+      {{steps.channel_code.$return_value.blocks[1].fields[3].text}}
       {{steps.channel_code.$return_value.blocks[2].text.text}}
       {{steps.channel_code.$return_value.blocks[4].text.text}}
       {{steps.channel_code.$return_value.blocks[5].fields[0].text}}
@@ -58,6 +59,7 @@ steps:
       {{steps.channel_code.$return_value.blocks[11].fields[3].text}}
       {{steps.channel_code.$return_value.blocks[12].text.text}}
       {{steps.channel_code.$return_value.blocks[13].text.text}}
+
       OP AI Link:
       {{steps.trigger.event.body.link}}
     addToChannel: false
