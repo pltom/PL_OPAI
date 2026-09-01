@@ -1,6 +1,7 @@
 schema: workflow/2022.04
 name: OP AI - Lead Buyer Outreach
 settings:
+  auto_retry: true
   error_notification: true
   lambda_timeout: 750
 triggers:
