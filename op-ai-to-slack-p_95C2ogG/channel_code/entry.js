@@ -1,30 +1,44 @@
-// Pipedream Node.js Code Step
-// Copy this code into a Node.js code step in your Pipedream workflow
-
 export default defineComponent({
   async run({ steps, $ }) {
     
-    // Get the webhook data from the trigger
-    const data = steps.trigger.event.body;
+    const data = steps.trigger.event.body || {};
     
-    // Helper function to get emoji based on score
-    function getScoreEmoji(score, isOutOfTen = false) {
-      const normalizedScore = isOutOfTen ? score * 10 : score;
-      if (normalizedScore >= 80) return "🟢";
-      if (normalizedScore >= 70) return "🟡"; 
-      if (normalizedScore >= 60) return "🟠";
+    function getScorePercentage(score, maxScore = 100) {
+      const numericScore = Number(score);
+      const numericMax = Number(maxScore);
+
+      if (!Number.isFinite(numericScore) || !Number.isFinite(numericMax) || numericMax <= 0) {
+        return 0;
+      }
+
+      return (numericScore / numericMax) * 100;
+    }
+
+    function getScoreEmoji(score, maxScore = 100) {
+      const percentage = getScorePercentage(score, maxScore);
+
+      if (percentage >= 80) return "🟢";
+      if (percentage >= 70) return "🟡";
+      if (percentage >= 60) return "🟠";
       return "🔴";
     }
-    
-    // Helper function to get performance color
-    function getPerformanceColor(score) {
-      if (score >= 80) return "good";
-      if (score >= 70) return "warning";
-      if (score >= 60) return "#ff9900";
+
+    function getPerformanceColor(score, maxScore = 100) {
+      const percentage = getScorePercentage(score, maxScore);
+
+      if (percentage >= 80) return "good";
+      if (percentage >= 70) return "warning";
+      if (percentage >= 60) return "#ff9900";
       return "danger";
     }
+
+    function formatMetric(scoreField, maxField, fallbackMax = 10) {
+      const score = Number(data[scoreField] ?? 0);
+      const maxScore = Number(data[maxField] ?? fallbackMax);
+
+      return `${score}/${maxScore} ${getScoreEmoji(score, maxScore)}`;
+    }
     
-    // Extract evaluation details from the text
     function extractEvaluationDetails(evaluation) {
       const details = {
         overallScore: '',
@@ -40,25 +54,21 @@ export default defineComponent({
         finalLearning: ''
       };
       
-      // Extract overall score
-      const scoreMatch = evaluation.match(/OVERALL SALES CALL SCORE: (\d+)\/100/);
+      const scoreMatch = evaluation.match(/OVERALL (?:SALES|LEAD MANAGER) CALL SCORE: (\d+)\/100/i);
       if (scoreMatch) {
         details.overallScore = scoreMatch[1];
       }
       
-      // Extract final verdict
       const verdictMatch = evaluation.match(/FINAL VERDICT:\s*(.*?)(?=\n\n|TALKING RATIO:|$)/s);
       if (verdictMatch) {
         details.finalVerdict = verdictMatch[1].trim();
       }
       
-      // Extract talking ratio
       const ratioMatch = evaluation.match(/TALKING RATIO:\s*(.*)/);
       if (ratioMatch) {
         details.talkingRatio = ratioMatch[1].trim();
       }
       
-      // Extract top tactics
       const tacticsMatch = evaluation.match(/### Top 3 Key Tactics Observed\s*((?:- .*\n?){1,3})/);
       if (tacticsMatch) {
         details.topTactics = tacticsMatch[1]
@@ -68,7 +78,6 @@ export default defineComponent({
           .slice(0, 3);
       }
       
-      // Extract top errors
       const errorsMatch = evaluation.match(/### Top 3 Unforced Errors Observed\s*((?:- .*\n?){1,3})/);
       if (errorsMatch) {
         details.topErrors = errorsMatch[1]
@@ -78,7 +87,6 @@ export default defineComponent({
           .slice(0, 3);
       }
       
-      // Extract next steps
       const stepsMatch = evaluation.match(/### 3 Tactical Next Steps\s*((?:\d+\. .*\n?){1,3})/);
       if (stepsMatch) {
         details.nextSteps = stepsMatch[1]
@@ -88,7 +96,6 @@ export default defineComponent({
           .slice(0, 3);
       }
       
-      // Extract structured reflection
       const reflectionMatch = evaluation.match(/\*\*Evaluation \(Structured Reflection on Rep's Performance\)\*\*\s*(.*?)(?=\*\*Strategy Checklist|$)/s);
       if (reflectionMatch) {
         const reflection = reflectionMatch[1];
@@ -100,7 +107,6 @@ export default defineComponent({
         };
       }
       
-      // Extract strategy checklist
       const checklistMatch = evaluation.match(/\*\*Strategy Checklist \(Pass\/Fail\)\*\*\s*(.*?)(?=\*\*Top 3|$)/s);
       if (checklistMatch) {
         const checklist = checklistMatch[1];
@@ -112,7 +118,6 @@ export default defineComponent({
         });
       }
       
-      // Extract prospect takeaways
       const takeawaysMatch = evaluation.match(/\*\*Prospect Takeaways\*\*\s*(.*?)(?=\*\*3 Missed|$)/s);
       if (takeawaysMatch) {
         const takeaways = takeawaysMatch[1];
@@ -124,7 +129,6 @@ export default defineComponent({
         };
       }
       
-      // Extract missed opportunities
       const missedMatch = evaluation.match(/\*\*3 Missed Opportunities\*\*\s*((?:\d+\. .*\n?){1,3})/);
       if (missedMatch) {
         details.missedOpportunities = missedMatch[1]
@@ -134,7 +138,6 @@ export default defineComponent({
           .slice(0, 3);
       }
       
-      // Extract final learning
       const learningMatch = evaluation.match(/\*\*Final Learning\*\*\s*(.*?)(?=\n\n|$)/s);
       if (learningMatch) {
         details.finalLearning = learningMatch[1].trim();
@@ -143,7 +146,6 @@ export default defineComponent({
       return details;
     }
     
-    // --- FIX: Use data.salesperson and data.prospect directly from payload ---
     let salesperson = 'Unknown';
     if (data.salesperson) {
       salesperson = data.salesperson;
@@ -165,19 +167,15 @@ export default defineComponent({
         prospect = prospectMatch[1].trim();
       }
     }
-    // -------------------------------------------------------------------------
     
-    // Get evaluation details
     const evalDetails = data.evaluation ? extractEvaluationDetails(data.evaluation) : {};
     
-    // Use the score from evaluation text if available, otherwise use call_score
     const finalScore = evalDetails.overallScore || data.call_score || 0;
-    const scoreEmoji = getScoreEmoji(parseInt(finalScore));
+    const finalScoreNumber = Number(finalScore) || 0;
+    const scoreEmoji = getScoreEmoji(finalScoreNumber, 100);
     
-    // Create the formatted Slack message
     const slackMessage = {
       blocks: [
-        // Block [0] - Header
         {
           type: "header",
           text: {
@@ -186,7 +184,6 @@ export default defineComponent({
           }
         },
         
-        // Block [1] - Main info section
         {
           type: "section",
           fields: [
@@ -209,7 +206,6 @@ export default defineComponent({
           ]
         },
         
-        // Block [2] - Talking ratio (conditional, always included as empty if missing)
         {
           type: "section",
           text: {
@@ -218,12 +214,10 @@ export default defineComponent({
           }
         },
         
-        // Block [3] - Divider
         {
           type: "divider"
         },
         
-        // Block [4] - Performance breakdown header
         {
           type: "section",
           text: {
@@ -232,66 +226,62 @@ export default defineComponent({
           }
         },
 
-        // Block [5] - Performance scores (6 fields)
         {
           type: "section",
           fields: [
             {
               type: "mrkdwn",
-              text: `*Opening & Control:* ${data.opening || 0}/10 ${getScoreEmoji(data.opening || 0, true)}`
+              text: `*Opening & Control:* ${formatMetric("opening", "opening_max")}`
             },
             {
               type: "mrkdwn", 
-              text: `*Empathy & Curiosity:* ${data.empathy || 0}/10 ${getScoreEmoji(data.empathy || 0, true)}`
+              text: `*Empathy & Curiosity:* ${formatMetric("empathy", "empathy_max")}`
             },
             {
               type: "mrkdwn",
-              text: `*Engagement:* ${data.engagement || 0}/10 ${getScoreEmoji(data.engagement || 0, true)}`
+              text: `*Engagement:* ${formatMetric("engagement", "engagement_max")}`
             },
             {
               type: "mrkdwn",
-              text: `*Assertiveness:* ${data.assertiveness || 0}/10 ${getScoreEmoji(data.assertiveness || 0, true)}`
+              text: `*Assertiveness:* ${formatMetric("assertiveness", "assertiveness_max")}`
             },
             {
               type: "mrkdwn",
-              text: `*Non-Neediness:* ${data.non_neediness || 0}/10 ${getScoreEmoji(data.non_neediness || 0, true)}`
+              text: `*Non-Neediness:* ${formatMetric("non_neediness", "non_neediness_max")}`
             },
             {
               type: "mrkdwn",
-              text: `*Closing:* ${data.closing || 0}/10 ${getScoreEmoji(data.closing || 0, true)}`
+              text: `*Closing:* ${formatMetric("closing", "closing_max")}`
             }
           ]
         },
         
-        // Block [6] - Additional metrics (guiding/objection/stories/remorse)
         {
           type: "section",
           fields: [
             {
               type: "mrkdwn",
-              text: `*Guiding Prospect:* ${data.guiding || 0}/10 ${getScoreEmoji(data.guiding || 0, true)}`
+              text: `*Guiding Prospect:* ${formatMetric("guiding", "guiding_max")}`
             },
             {
               type: "mrkdwn", 
-              text: `*Objection Handling:* ${data.objection || 0}/10 ${getScoreEmoji(data.objection || 0, true)}`
+              text: `*Objection Handling:* ${formatMetric("objection", "objection_max")}`
             },
             {
               type: "mrkdwn",
-              text: `*Storytelling:* ${data.stories || 0}/10 ${getScoreEmoji(data.stories || 0, true)}`
+              text: `*Storytelling:* ${formatMetric("stories", "stories_max")}`
             },
             {
               type: "mrkdwn",
-              text: `*Preventing Remorse:* ${data.remorse || 0}/10 ${getScoreEmoji(data.remorse || 0, true)}`
+              text: `*Preventing Remorse:* ${formatMetric("remorse", "remorse_max")}`
             }
           ]
         },
         
-        // Block [7] - Divider
         {
           type: "divider"
         },
         
-        // Block [8] - Final verdict
         {
           type: "section",
           text: {
@@ -300,7 +290,6 @@ export default defineComponent({
           }
         },
         
-        // Block [9] - Strategy checklist
         {
           type: "section",
           text: {
@@ -311,7 +300,6 @@ export default defineComponent({
           }
         },
         
-        // Block [10] - Prospect insights header
         {
           type: "section",
           text: {
@@ -320,7 +308,6 @@ export default defineComponent({
           }
         },
         
-        // Block [11] - Prospect fields (4 fields)
         {
           type: "section",
           fields: [
@@ -343,7 +330,6 @@ export default defineComponent({
           ]
         },
         
-        // Block [12] - Missed opportunities
         {
           type: "section",
           text: {
@@ -354,7 +340,6 @@ export default defineComponent({
           }
         },
         
-        // Block [13] - Final learning
         {
           type: "section",
           text: {
@@ -363,12 +348,10 @@ export default defineComponent({
           }
         },
         
-        // Block [14] - Divider
         {
           type: "divider"
         },
         
-        // Block [15] - Action buttons
         {
           type: "actions",
           elements: [
@@ -393,17 +376,14 @@ export default defineComponent({
         }
       ],
       
-      // Fallback text for notifications
       text: `Sales call evaluation: ${salesperson} scored ${finalScore}/100`,
       
-      // Color sidebar based on performance
       attachments: [{
-        color: getPerformanceColor(parseInt(finalScore)),
+        color: getPerformanceColor(finalScoreNumber, 100),
         text: " "
       }]
     };
     
-    // Return the formatted message for use in next step
     return slackMessage;
   },
 })
