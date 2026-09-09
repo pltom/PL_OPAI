@@ -63,7 +63,7 @@ export default defineComponent({
       return lines.slice(startIndex + 1, endIndex).join("\n").split("\n```")[0].trim();
     }
 
-    function getListItems(section, limit = 3) {
+    function getListItems(section, limit = 2) {
       return section
         .split(/\r?\n/)
         .map(line => line.trim())
@@ -96,6 +96,95 @@ export default defineComponent({
       const text = String(value || "").trim();
       if (text.length <= maxLength) return text;
       return `${text.slice(0, maxLength - 1).trim()}…`;
+    }
+
+    function limitSlackText(text, maxLength = 2700) {
+      const value = String(text || "");
+      if (value.length <= maxLength) return value;
+
+      const shortened = value.slice(0, maxLength).trimEnd();
+      const lastDoubleBreak = shortened.lastIndexOf("\n\n");
+      const lastBreak = shortened.lastIndexOf("\n");
+      const breakIndex = Math.max(lastDoubleBreak, lastBreak);
+
+      if (breakIndex > maxLength * 0.75) {
+        return shortened.slice(0, breakIndex).trimEnd();
+      }
+
+      return shortened;
+    }
+
+    function getPlainTextFromBlocks(blocks) {
+      return blocks
+        .flatMap(block => {
+          const parts = [];
+
+          if (block.text?.text) {
+            parts.push(block.text.text);
+          }
+
+          if (Array.isArray(block.fields)) {
+            parts.push(
+              ...block.fields
+                .map(field => field.text)
+                .filter(Boolean)
+            );
+          }
+
+          return parts;
+        })
+        .join("\n");
+    }
+
+    function buildSlackText(blocks, linkText, maxLength = 2700) {
+      const visibleBlocks = blocks.filter(block => block.type !== "actions");
+      const truncationNotice = "[Some details were shortened. Open the link below to view the full evaluation.]";
+
+      const candidateBlockSets = [
+        visibleBlocks,
+        visibleBlocks.filter((_block, index) => index !== 12),
+        visibleBlocks.filter((_block, index) => ![12, 10, 11].includes(index)),
+        visibleBlocks.filter((_block, index) => ![12, 10, 11, 9].includes(index)),
+        visibleBlocks.filter((_block, index) => ![12, 10, 11, 9, 8].includes(index))
+      ];
+
+      for (let index = 0; index < candidateBlockSets.length; index++) {
+        const body = getPlainTextFromBlocks(candidateBlockSets[index]);
+        const result = `${body}${linkText}`;
+
+        if (result.length <= maxLength && index === 0) {
+          return result;
+        }
+
+        if (result.length <= maxLength) {
+          const availableBody = Math.max(
+            0,
+            maxLength - linkText.length - truncationNotice.length - 2
+          );
+          const shortenedBody = limitSlackText(body, availableBody);
+          return `${shortenedBody}\n\n${truncationNotice}${linkText}`.trim();
+        }
+      }
+
+      const finalLearningBlock = visibleBlocks[13];
+      const finalLearningText = finalLearningBlock
+        ? getPlainTextFromBlocks([finalLearningBlock])
+        : "";
+
+      const beforeFinalLearningBlocks = visibleBlocks.filter(
+        (_block, index) => ![8, 9, 10, 11, 12, 13].includes(index)
+      );
+      const beforeFinalLearning = getPlainTextFromBlocks(beforeFinalLearningBlocks);
+      const availableBeforeFinalLearning = Math.max(
+        0,
+        maxLength - linkText.length - truncationNotice.length - finalLearningText.length - 3
+      );
+      const safeBeforeFinalLearning = limitSlackText(
+        beforeFinalLearning,
+        availableBeforeFinalLearning
+      );
+
+      return `${safeBeforeFinalLearning}\n\n${truncationNotice}\n${finalLearningText}${linkText}`.trim();
     }
 
     function extractEvaluationDetails(text) {
@@ -306,7 +395,7 @@ export default defineComponent({
           text: {
             type: "mrkdwn",
             text: evalDetails.finalVerdict
-              ? `*🎯 Final Verdict*\n${truncate(evalDetails.finalVerdict, 900)}`
+              ? `*🎯 Final Verdict*\n${truncate(evalDetails.finalVerdict, 650)}`
               : "*🎯 Final Verdict*\nN/A"
           }
         },
@@ -331,19 +420,19 @@ export default defineComponent({
           fields: [
             {
               type: "mrkdwn",
-              text: `*Problem:*\n${truncate(prospectTakeaways.coreProblem || "N/A", 260)}`
+              text: `*Problem:*\n${truncate(prospectTakeaways.coreProblem || "N/A", 180)}`
             },
             {
               type: "mrkdwn",
-              text: `*Motivation:*\n${truncate(prospectTakeaways.motivation || "N/A", 260)}`
+              text: `*Motivation:*\n${truncate(prospectTakeaways.motivation || "N/A", 180)}`
             },
             {
               type: "mrkdwn",
-              text: `*Emotions:*\n${truncate(prospectTakeaways.emotions || "N/A", 260)}`
+              text: `*Emotions:*\n${truncate(prospectTakeaways.emotions || "N/A", 180)}`
             },
             {
               type: "mrkdwn",
-              text: `*Timeline:*\n${truncate(prospectTakeaways.timeline || "N/A", 260)}`
+              text: `*Timeline:*\n${truncate(prospectTakeaways.timeline || "N/A", 180)}`
             }
           ]
         },
@@ -353,7 +442,7 @@ export default defineComponent({
             type: "mrkdwn",
             text: evalDetails.missedOpportunities.length > 0
               ? `*💡 Missed Opportunities*\n${evalDetails.missedOpportunities
-                  .map((opportunity, index) => `${index + 1}. ${truncate(opportunity, 350)}`)
+                  .map((opportunity, index) => `${index + 1}. ${truncate(opportunity, 220)}`)
                   .join("\n")}`
               : "*💡 Missed Opportunities*\nN/A"
           }
@@ -363,7 +452,7 @@ export default defineComponent({
           text: {
             type: "mrkdwn",
             text: evalDetails.finalLearning
-              ? `*🎓 Final Learning*\n${truncate(evalDetails.finalLearning, 500)}`
+              ? `*🎓 Final Learning*\n${truncate(evalDetails.finalLearning, 350)}`
               : "*🎓 Final Learning*\nN/A"
           }
         },
@@ -400,6 +489,13 @@ export default defineComponent({
       }]
     };
 
-    return slackMessage;
+    const linkText = data.link ? `\n\nOP AI Link:\n${data.link}` : "";
+    const safeText = buildSlackText(slackMessage.blocks, linkText, 2700);
+
+    return {
+      ...slackMessage,
+      text: safeText,
+      slackText: safeText
+    };
   }
 });
