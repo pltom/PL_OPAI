@@ -1,17 +1,21 @@
 export default defineComponent({
   async run({ steps, $ }) {
-
-    const text = steps.transcribe.transcript || "";
-    const wordCount = text.trim().split(/\s+/).length;
+    const text = steps.transcribe?.transcript || "";
+    const trimmedText = text.trim();
+    const wordCount = trimmedText ? trimmedText.split(/\s+/).length : 0;
 
     if (wordCount <= 150) {
-      $.export("$summary", `⛔ Workflow stopped: transcript is only ${wordCount} words.`);
-      throw new Error("STOP_WORKFLOW: Transcript too short.");
+      const message = `⛔ Workflow stopped: transcript is only ${wordCount} words.`;
+
+      console.log(message);
+      $.export("$summary", message);
+
+      return $.flow.exit(message);
     }
 
     return {
       wordCount,
-      status: "OK — continuing workflow."
+      status: "OK - continuing workflow."
     };
   }
-})
+});
