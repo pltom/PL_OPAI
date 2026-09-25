@@ -1,5 +1,6 @@
 schema: workflow/2022.04
 name: OP AI - RPL
+inactive: true
 settings:
   auto_retry: true
   error_notification: true
